@@ -34,47 +34,95 @@ Tokens de API são gerados em: https://id.atlassian.com/manage-profile/security/
 
 ## API Call Pattern
 
-```bash
-source ~/.jira-credentials
-AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0)
+Always combine authentication, HTTP call, and JSON parsing in a **single pipeline** to avoid multiple executions per operation:
 
+```bash
+source ~/.jira-credentials && \
+AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0) && \
 curl -s -X <METHOD> \
   -H "Authorization: Basic ${AUTH}" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
-  "https://fxsolutions.atlassian.net/rest/api/3/<endpoint>"
+  "https://fxsolutions.atlassian.net/rest/api/3/<endpoint>" | \
+python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+print(json.dumps(d, indent=2, ensure_ascii=False))
+"
 ```
+
+> **Rule:** Never split `source credentials`, `curl`, and JSON parsing into separate commands. One operation = one pipeline.
 
 ## Operations
 
 ### Get Issue Details
 
+> `comment` is already included in `fields` — no separate call needed for comments.
+
 ```bash
-source ~/.jira-credentials && AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0)
+source ~/.jira-credentials && \
+AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0) && \
 curl -s \
   -H "Authorization: Basic ${AUTH}" \
   -H "Accept: application/json" \
-  "https://fxsolutions.atlassian.net/rest/api/3/issue/<ISSUE_KEY>?fields=summary,description,status,assignee,reporter,priority,issuetype,labels,comment,parent,components,fixVersions,created,updated,duedate"
-```
-
-### Get Issue Comments
-
-```bash
-source ~/.jira-credentials && AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0)
-curl -s \
-  -H "Authorization: Basic ${AUTH}" \
-  -H "Accept: application/json" \
-  "https://fxsolutions.atlassian.net/rest/api/3/issue/<ISSUE_KEY>/comment?orderBy=created"
+  "https://fxsolutions.atlassian.net/rest/api/3/issue/<ISSUE_KEY>?fields=summary,description,status,assignee,reporter,priority,issuetype,labels,comment,parent,subtasks,components,fixVersions,customfield_10016,created,updated,duedate" | \
+python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+f = d.get('fields', {})
+print('Key:', d.get('key'))
+print('Summary:', f.get('summary'))
+print('Status:', f.get('status', {}).get('name'))
+print('Assignee:', (f.get('assignee') or {}).get('displayName', 'Não atribuído'))
+print('Reporter:', (f.get('reporter') or {}).get('displayName'))
+print('Priority:', (f.get('priority') or {}).get('name'))
+print('Story Points:', f.get('customfield_10016', 'Não informado'))
+print('Fix Versions:', ', '.join(v['name'] for v in f.get('fixVersions', [])) or 'Não definida')
+print('Labels:', ', '.join(f.get('labels', [])) or 'Nenhuma')
+print('Components:', ', '.join(c['name'] for c in f.get('components', [])) or 'Nenhum')
+parent = f.get('parent')
+if parent:
+    print('Epic pai:', parent['key'], '—', parent.get('fields', {}).get('summary', ''))
+subtasks = f.get('subtasks', [])
+print('Subtasks:', ', '.join(f"{s['key']} {s['fields']['summary']} ({s['fields']['status']['name']})" for s in subtasks) or 'Nenhuma')
+print('Created:', f.get('created', '')[:10])
+print('Updated:', f.get('updated', '')[:10])
+print()
+# Description
+desc = f.get('description') or {}
+for block in desc.get('content', []):
+    for inline in block.get('content', []):
+        t = inline.get('text', '')
+        if t:
+            print(t)
+# Comments
+comments = f.get('comment', {}).get('comments', [])
+if comments:
+    print(f'\n--- Comentários ({len(comments)}) ---')
+    for c in comments:
+        author = c.get('author', {}).get('displayName', '?')
+        date = c.get('created', '')[:10]
+        body = ' '.join(i.get('text','') for b in c.get('body',{}).get('content',[]) for i in b.get('content',[]))
+        print(f'[{date}] {author}: {body}')
+"
 ```
 
 ### Search Issues (JQL)
 
 ```bash
-source ~/.jira-credentials && AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0)
+source ~/.jira-credentials && \
+AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0) && \
 curl -s \
   -H "Authorization: Basic ${AUTH}" \
   -H "Accept: application/json" \
-  "https://fxsolutions.atlassian.net/rest/api/3/search?jql=<JQL>&fields=summary,status,assignee,priority,issuetype&maxResults=50"
+  "https://fxsolutions.atlassian.net/rest/api/3/search?jql=<JQL>&fields=summary,status,assignee,priority,issuetype&maxResults=50" | \
+python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for issue in d.get('issues', []):
+    f = issue.get('fields', {})
+    print(issue['key'], '|', f.get('status',{}).get('name'), '|', f.get('summary'))
+"
 ```
 
 Common JQL patterns:
@@ -107,11 +155,14 @@ Issues created **without** a sprint field (`customfield_10007`) automatically la
 
 All other custom fields should be omitted.
 
-#### Step 1 — Create the issue
+#### Single command — Create issue and set ERI Link
+
+Create the issue and immediately set the ERI Link in one pipeline. `AUTH` is reused across both calls; `ISSUE_KEY` is captured via `python3` from the POST response.
 
 ```bash
-source ~/.jira-credentials && AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0)
-RESPONSE=$(curl -s -X POST \
+source ~/.jira-credentials && \
+AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0) && \
+ISSUE_KEY=$(curl -s -X POST \
   -H "Authorization: Basic ${AUTH}" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
@@ -166,23 +217,14 @@ RESPONSE=$(curl -s -X POST \
       "labels": []
     }
   }' \
-  "https://fxsolutions.atlassian.net/rest/api/3/issue")
-
-ISSUE_KEY=$(echo "$RESPONSE" | grep -o '"key":"[^"]*"' | head -1 | cut -d'"' -f4)
-echo "Created: $ISSUE_KEY"
-```
-
-#### Step 2 — Set ERI Link to the issue's own URL
-
-After the issue is created, immediately update `customfield_17636` with the issue's own Jira URL:
-
-```bash
-source ~/.jira-credentials && AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0)
+  "https://fxsolutions.atlassian.net/rest/api/3/issue" | \
+  python3 -c "import sys, json; print(json.load(sys.stdin).get('key', ''))") && \
 curl -s -X PUT \
   -H "Authorization: Basic ${AUTH}" \
   -H "Content-Type: application/json" \
   -d "{\"fields\": {\"customfield_17636\": \"https://fxsolutions.atlassian.net/browse/${ISSUE_KEY}\"}}" \
-  "https://fxsolutions.atlassian.net/rest/api/3/issue/${ISSUE_KEY}"
+  "https://fxsolutions.atlassian.net/rest/api/3/issue/${ISSUE_KEY}" > /dev/null && \
+echo "Created: https://fxsolutions.atlassian.net/browse/${ISSUE_KEY}"
 ```
 
 Available issue types in the EPT project: `História` (Story), `Bug`, `Epic`, `Tarefa` (Task), `Sub-tarefa` (Subtask).
@@ -190,7 +232,8 @@ Available issue types in the EPT project: `História` (Story), `Bug`, `Epic`, `T
 ### Add Comment to Issue
 
 ```bash
-source ~/.jira-credentials && AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0)
+source ~/.jira-credentials && \
+AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0) && \
 curl -s -X POST \
   -H "Authorization: Basic ${AUTH}" \
   -H "Content-Type: application/json" \
@@ -213,7 +256,8 @@ curl -s -X POST \
 ### Update Issue Fields
 
 ```bash
-source ~/.jira-credentials && AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0)
+source ~/.jira-credentials && \
+AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0) && \
 curl -s -X PUT \
   -H "Authorization: Basic ${AUTH}" \
   -H "Content-Type: application/json" \
@@ -228,6 +272,10 @@ When displaying issue data:
 - **Description**: Parse ADF (Atlassian Document Format) — traverse `content[].content[].text` nodes. Handle `paragraph`, `bulletList`, `orderedList`, `heading`, `codeBlock` types.
 - **Comments**: Show author displayName, formatted date, and body text.
 - **Dates**: Format as readable (e.g., "10 de abril de 2026").
+- **Story Points**: Read from `customfield_10016`. If `null` or absent, display as "Não informado".
+- **Subtasks**: Read from `subtasks[]` array — display each as `[KEY] Summary (Status)`. If empty, display "Nenhuma".
+- **Epic pai**: Read from `parent.key` + `parent.fields.summary`. Display as `[KEY] — Summary`.
+- **Fix Versions**: Read from `fixVersions[].name`. If empty, display "Não definida".
 
 ## Constraints
 
