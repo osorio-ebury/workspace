@@ -41,13 +41,6 @@ Cada aplicação dentro de um time segue o padrão de três subpastas:
 | `Money-Flows/` | Money Flows       | `ebb-money-flows`       |
 | `Platform/`    | Platform/Enablers | `ebb-enablers`          |
 
-## Documentação Técnica
-
-| Arquivo | Descrição |
-|---------|-----------|
-| [EPT-2134-wp-uploads-service-account.md](EPT-2134-wp-uploads-service-account.md) | Padronização de Workload Identity e service accounts com permissões mínimas para stacks de testes GCP |
-| [migration-bigquery.md](migration-bigquery.md) | Plano de migração de datasets/tabelas/views do BigQuery entre projetos GCP |
-
 ## GitHub Copilot
 
 O diretório `.github/` contém instruções e agentes customizados para o GitHub Copilot:
