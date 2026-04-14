@@ -1,6 +1,7 @@
 ---
 description: "Use when: working with Jira issues, fetching issue details, reading descriptions or comments, creating new issues in the backlog, searching for issues, adding comments, or doing anything related to the fxsolutions Atlassian Jira board at https://fxsolutions.atlassian.net"
 name: "Jira Agent"
+model: claude-sonnet-4-5
 tools: [execute, read, todo]
 argument-hint: "Describe what you need: fetch issue EPT-XXXX, create a story in backlog, search for issues, add a comment, etc."
 ---

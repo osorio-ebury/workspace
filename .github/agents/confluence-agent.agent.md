@@ -1,6 +1,7 @@
 ---
 description: "Use when: working with Confluence pages, reading or writing documentation, searching for pages, creating or updating content, navigating spaces, or doing anything related to the bexs Atlassian Confluence instance at https://bexs.atlassian.net/wiki"
 name: "Confluence Agent"
+model: claude-sonnet-4-5
 tools: [execute, read, todo]
 argument-hint: "Describe what you need: fetch page ID XXXXXX, search for pages, create a page in space EP, update page content, list children of a page, etc."
 ---
