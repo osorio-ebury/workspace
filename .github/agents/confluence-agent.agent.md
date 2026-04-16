@@ -470,3 +470,164 @@ When displaying page or space data:
 - ONLY interact with `https://bexs.atlassian.net`.
 - When space key is not specified, default to `EP`.
 - When fetching page content, prefer `body-format=storage` for reading and editing.
+
+## Navegação de Hierarquias de Páginas
+
+### Buscar página por caminho lógico (path)
+
+Quando um caminho lógico é fornecido (ex: "Ops/Migrações/GCP/Migração FX"), use CQL para navegar:
+
+1. **Buscar a página raiz** (primeiro nível):
+```bash
+curl -s \
+  -H "Authorization: Basic ${AUTH}" \
+  -H "Accept: application/json" \
+  "https://bexs.atlassian.net/wiki/rest/api/search?cql=space=EP AND type=page AND title~\"Ops\"&limit=5"
+```
+
+2. **Buscar filhos da página raiz** até chegar ao destino:
+```bash
+# Obter ID da página "Ops", depois buscar filhos com title "Migrações"
+curl -s \
+  -H "Authorization: Basic ${AUTH}" \
+  -H "Accept: application/json" \
+  "https://bexs.atlassian.net/wiki/rest/api/search?cql=parent=<OPS_PAGE_ID> AND title~\"Migrações\"&limit=5"
+```
+
+3. **CQL combinado** (mais eficiente):
+```bash
+# Buscar diretamente pelo título e validar com ancestors
+curl -s \
+  -H "Authorization: Basic ${AUTH}" \
+  -H "Accept: application/json" \
+  "https://bexs.atlassian.net/wiki/rest/api/search?cql=space=EP AND type=page AND title=\"Migração FX\"&limit=10"
+```
+
+### Exemplo prático: Encontrar "Migração FX" em "Ops > Migrações > GCP"
+
+```bash
+source ~/.jira-credentials && \
+AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 -w 0) && \
+curl -s \
+  -H "Authorization: Basic ${AUTH}" \
+  -H "Accept: application/json" \
+  "https://bexs.atlassian.net/wiki/rest/api/search?cql=space=EP AND type=page AND title~\"Migração FX\"&limit=10" | \
+python3 -c "
+import sys, json
+results = json.load(sys.stdin).get('results', [])
+for r in results:
+    print(f\"ID: {r['content']['id']} | Title: {r['content']['title']} | URL: https://bexs.atlassian.net{r['content']['_links']['webui']}\")"
+```
+
+Depois valide os ancestors com `/api/v2/pages/<PAGE_ID>/ancestors` para confirmar o caminho completo.
+
+## Criando Páginas Técnicas Complexas
+
+### Template: Estudo Técnico / Análise de Opções
+
+Use este template para criar estudos técnicos com comparativos, prós/contras, e recomendações:
+
+```xml
+<h1>Estudo: [Título do Estudo]</h1>
+
+<p><strong>Issue:</strong> <a href="https://fxsolutions.atlassian.net/browse/[ISSUE_KEY]">[ISSUE_KEY]</a></p>
+<p><strong>Data:</strong> [Data]</p>
+
+<h2>Contexto</h2>
+<p>[Descrição do problema ou necessidade, com links para documentação relevante]</p>
+
+<h2>O que [tecnologia/recurso] cria internamente</h2>
+<p>[Descrição dos componentes criados automaticamente]</p>
+<table>
+<tbody>
+<tr><th>Recurso</th><th>Tipo</th><th>Descrição</th></tr>
+<tr><td>[Recurso 1]</td><td>[Tipo GCP/AWS/Azure]</td><td>[Descrição]</td></tr>
+<tr><td>[Recurso 2]</td><td>[Tipo]</td><td>[Descrição]</td></tr>
+</tbody>
+</table>
+
+<h2>Opção 1: [Nome da Opção]</h2>
+
+<h3>Descrição</h3>
+<p>[Descrição detalhada da abordagem]</p>
+
+<h3>Prós</h3>
+<ul>
+<li><strong>[Aspecto positivo 1]</strong> — [detalhamento]</li>
+<li><strong>[Aspecto positivo 2]</strong> — [detalhamento]</li>
+</ul>
+
+<h3>Contras</h3>
+<ul>
+<li><strong>[Aspecto negativo 1]</strong> — [detalhamento]</li>
+<li><strong>[Aspecto negativo 2]</strong> — [detalhamento]</li>
+</ul>
+
+<h3>Riscos</h3>
+<table>
+<tbody>
+<tr><th>Risco</th><th>Impacto</th><th>Probabilidade</th></tr>
+<tr><td>[Risco 1]</td><td>[Alto/Médio/Baixo]</td><td>[Alta/Média/Baixa]</td></tr>
+<tr><td>[Risco 2]</td><td>[Impacto]</td><td>[Probabilidade]</td></tr>
+</tbody>
+</table>
+
+<h3>Exemplo de uso</h3>
+<ac:structured-macro ac:name="code">
+<ac:parameter ac:name="language">hcl</ac:parameter>
+<ac:plain-text-body><![CDATA[
+# Código de exemplo aqui
+resource "example" "demo" {
+  # ...
+}
+]]></ac:plain-text-body>
+</ac:structured-macro>
+
+<h2>Opção 2: [Nome da Opção 2]</h2>
+[Repetir estrutura acima]
+
+<h2>Comparativo final</h2>
+<table>
+<tbody>
+<tr><th>Critério</th><th>Opção 1</th><th>Opção 2</th><th>Opção 3</th></tr>
+<tr><td>Esforço de implementação</td><td>[Valor]</td><td>[Valor]</td><td>[Valor]</td></tr>
+<tr><td>Manutenção contínua</td><td>[Valor]</td><td>[Valor]</td><td>[Valor]</td></tr>
+<tr><td>Viabilidade prática</td><td>[Valor]</td><td>[Valor]</td><td>[Valor]</td></tr>
+</tbody>
+</table>
+
+<h2>Recomendação</h2>
+<p>A <strong>abordagem mais pragmática é [opção escolhida]</strong>, dado que [justificativa]. Os riscos [da opção escolhida] são mitigáveis:</p>
+<ol>
+<li>[Mitigação 1]</li>
+<li>[Mitigação 2]</li>
+<li>[Mitigação 3]</li>
+</ol>
+<p>Se [condição], a recomendação alternativa é <strong>[opção alternativa]</strong>. A opção [X] <strong>não é recomendada</strong> pela [razão].</p>
+```
+
+### Boas Práticas para Conteúdo Técnico
+
+1. **Use tabelas para comparativos** — são visuais e facilitam a decisão
+2. **Estruture riscos com impacto + probabilidade** — ajuda priorização
+3. **Forneça exemplos de código** — sempre que possível, com syntax highlighting
+4. **Link para fontes externas** — registry, GitHub, docs oficiais
+5. **Inclua metadata no topo** — issue relacionado, data, autor (se relevante)
+6. **Separe prós/contras de riscos** — prós/contras são características fixas; riscos são eventos incertos
+7. **Termine com recomendação clara** — não deixe o leitor sem direção
+8. **Use `<strong>` para destacar pontos-chave** nas listas
+
+### Exemplo Real: Firebase Extension Study
+
+**Página criada:** `3248947206` — "Estudo - Firebase Extension (firestore-bigquery-export) via Terraform"  
+**Caminho:** Ops > Migrações > GCP > Migração FX  
+**Parent ID:** `3232235526`  
+**Tamanho:** ~14KB de XHTML com 6 tabelas, 3 blocos de código  
+**Método:** Python script (ver seção "Updating/Creating Pages with Large Content")
+
+**Lições aprendidas:**
+- Para conteúdo >5KB ou com 3+ tabelas/codeblocks, **sempre use Python**
+- Estruturar comparativos matriciais (opções × critérios) facilita scan visual
+- Incluir nota final sobre limitações da infra atual (ex: provider version) contextualiza para o leitor
+- Validar hierarquia com `/ancestors` evita criar páginas no lugar errado
+
