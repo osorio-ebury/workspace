@@ -499,12 +499,29 @@ metadata:
 > O Pub/Sub service agent é usado em DL topics com `roles/pubsub.publisher` e em subscriptions com DL usando `roles/pubsub.subscriber`.
 
 ### Service Accounts
-- GCP: `ebb-<nome-app>@ebb-ebury-connect-<env>.iam.gserviceaccount.com`
-- K8s: `ebb-<nome-app>`
+
+**⚠️ REGRA: Todas as Service Accounts (GCP e Kubernetes) devem obrigatoriamente ter o prefixo `ebb-`.**
+
+- GCP (aplicação): `ebb-<nome-app>@ebb-ebury-connect-<env>.iam.gserviceaccount.com`
+- GCP (testes CI): `ebb-<nome-app>-test@bexs-platform.iam.gserviceaccount.com`
+- K8s (aplicação): `ebb-<nome-app>`
+- K8s (testes CI): `ebb-<nome-app>-test` (namespace `argo` no cluster tools)
+
+**Exemplos corretos:**
+- `ebb-wp-portal-api@ebb-ebury-connect-dev.iam.gserviceaccount.com` (SA de aplicação)
+- `ebb-wp-hedges-test@bexs-platform.iam.gserviceaccount.com` (SA de testes)
+- `ebb-wp-uploads-test` (KSA de testes no cluster tools)
+
+**Exemplos incorretos:**
+- ~~`wp-portal-api-test@bexs-platform.iam.gserviceaccount.com`~~ (falta prefixo `ebb-`)
+- ~~`hedges-test@bexs-platform.iam.gserviceaccount.com`~~ (falta prefixo `ebb-` e `wp-`)
+
+> Para SAs de testes do time Webpayments, o padrão é `ebb-wp-<nome>-test` (mantém o prefixo `wp-` do time).
 
 ### Roles
 - General: `ebb_<nome_app>_general_privilege_role_<env>`
 - Least: `ebb_<nome_app>_least_privilege_role_<env>`
+- Least (testes CI): `ebb_<nome_app>_test_least_privilege_role_<env>`
 
 ### Recursos GCP
 - Buckets: `ebb-<nome>-<env>`

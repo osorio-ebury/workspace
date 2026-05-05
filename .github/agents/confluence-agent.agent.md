@@ -464,12 +464,13 @@ When displaying page or space data:
 
 - NEVER print or expose the raw `JIRA_API_TOKEN` value in any output.
 - NEVER hardcode page version numbers — ALWAYS fetch dynamically before update.
-- ALWAYS confirm with the user before creating or modifying any page.
+- When invoked by a parent agent with explicit instructions to create/update a page, proceed directly — the parent already confirmed intent. Only ask for confirmation when interacting directly with the user and the action is ambiguous.
 - NEVER delete pages without explicit confirmation — deletion moves to trash, `purge=true` is permanent.
 - ALWAYS use Python for large page updates — never inline large XHTML in curl commands.
 - ONLY interact with `https://bexs.atlassian.net`.
 - When space key is not specified, default to `EP`.
 - When fetching page content, prefer `body-format=storage` for reading and editing.
+- **ALWAYS return a final report** with: success/failure status, page URL, page ID, and version number after any create/update operation. Never return empty output.
 
 ## Navegação de Hierarquias de Páginas
 
@@ -630,4 +631,117 @@ resource "example" "demo" {
 - Estruturar comparativos matriciais (opções × critérios) facilita scan visual
 - Incluir nota final sobre limitações da infra atual (ex: provider version) contextualiza para o leitor
 - Validar hierarquia com `/ancestors` evita criar páginas no lugar errado
+
+## Extracting Page ID from URLs
+
+Confluence page URLs follow this pattern:
+```
+https://bexs.atlassian.net/wiki/spaces/<SPACE_KEY>/pages/<PAGE_ID>/<URL-encoded-title>
+```
+
+**Examples:**
+- `https://bexs.atlassian.net/wiki/spaces/EP/pages/3282173965/Documenta+o+de+Migra+o+Conex+o+ODBC+BigQuery+-+Time+de+Tesouraria` → Page ID: `3282173965`
+- `https://bexs.atlassian.net/wiki/spaces/EP/pages/3248947206/Estudo+-+Firebase+Extension` → Page ID: `3248947206`
+
+**Rule:** When the user or parent agent provides a full Confluence URL, extract the page ID directly from the URL path (the numeric segment after `/pages/`). Do NOT search for the page — use the ID immediately with the API.
+
+### Extract with bash:
+```bash
+URL="https://bexs.atlassian.net/wiki/spaces/EP/pages/3282173965/Title+Here"
+PAGE_ID=$(echo "$URL" | grep -oP '/pages/\K[0-9]+')
+echo "$PAGE_ID"  # 3282173965
+```
+
+## Workflow: Update Existing Page from Markdown Content
+
+When asked to publish markdown content to an existing Confluence page:
+
+1. **Extract page ID** from the provided URL (see section above)
+2. **Convert markdown to Confluence storage format (XHTML)** using the conversion guide
+3. **Use the Python method** for any content with tables, code blocks, or >2KB of text
+4. **Preserve the existing page title** — fetch it from the API before updating (unless a new title is explicitly provided)
+5. **Execute the update** and report back: success/failure, URL, version number
+
+### Example: Markdown documentation → Confluence page update
+
+```python
+import json, os, base64, urllib.request
+
+# Load credentials
+creds_path = os.path.expanduser("~/.jira-credentials")
+creds = {}
+with open(creds_path) as f:
+    for line in f:
+        if "=" in line:
+            k, v = line.strip().split("=", 1)
+            creds[k] = v
+
+auth = base64.b64encode(f"{creds['JIRA_EMAIL']}:{creds['JIRA_API_TOKEN']}".encode()).decode()
+headers = {
+    "Authorization": f"Basic {auth}",
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+}
+BASE = "https://bexs.atlassian.net/wiki/api/v2"
+PAGE_ID = "<PAGE_ID>"  # Extracted from URL
+
+# Step 1: Fetch current version and title
+req = urllib.request.Request(f"{BASE}/pages/{PAGE_ID}", headers=headers)
+with urllib.request.urlopen(req) as resp:
+    page = json.loads(resp.read())
+current_version = page["version"]["number"]
+title = page["title"]
+
+# Step 2: Build XHTML content (converted from markdown)
+content = """<h2>1. Visão Geral</h2>
+<p>Content converted from markdown...</p>
+<!-- Full XHTML here -->
+"""
+
+# Step 3: Update
+payload = json.dumps({
+    "id": PAGE_ID,
+    "status": "current",
+    "title": title,
+    "body": {"representation": "storage", "value": content},
+    "version": {"number": current_version + 1, "message": "Updated via API"}
+})
+
+req = urllib.request.Request(f"{BASE}/pages/{PAGE_ID}", data=payload.encode(),
+                             headers=headers, method="PUT")
+with urllib.request.urlopen(req) as resp:
+    result = json.loads(resp.read())
+    print(f"✅ Updated to version {result['version']['number']}")
+    print(f"URL: https://bexs.atlassian.net/wiki/spaces/EP/pages/{PAGE_ID}")
+```
+
+### Nested lists in storage format
+
+For markdown with nested bullet lists (common in documentation):
+```markdown
+* **Key people:**
+    * **Role 1:** Name 1
+    * **Role 2:** Name 2
+* **Users:**
+    * User A
+    * User B
+```
+
+Convert to:
+```xml
+<ul>
+  <li><strong>Key people:</strong>
+    <ul>
+      <li><strong>Role 1:</strong> Name 1</li>
+      <li><strong>Role 2:</strong> Name 2</li>
+    </ul>
+  </li>
+  <li><strong>Users:</strong>
+    <ul>
+      <li>User A</li>
+      <li>User B</li>
+    </ul>
+  </li>
+</ul>
+```
 
