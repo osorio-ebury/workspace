@@ -75,6 +75,8 @@ Cada aplicação dentro da pasta do time segue o padrão de **3 subpastas**:
 
 > **Nota**: Ainda existem algumas pastas soltas na raiz do workspace que estão sendo reorganizadas para seguir este padrão de pastas por time.
 
+> **Exceção de overlays**: Alguns repos legados (ex: `bexs-dollar`) usam nomes de overlay diferentes (`staging`, `production`) em vez do padrão `ebb-dev/ebb-stg/ebb-prd`. O step `commit-deploy` do pipeline suporta ambos os padrões.
+
 ### `pipeline_config.yaml` (Configuração CI/CD)
 Arquivo presente no repositório gitops que define parâmetros da pipeline:
 ```yaml
@@ -93,9 +95,16 @@ pipeline:
     test:
       framework: cucumber   # ou cypress, playwright
       service_account: <nome-da-ksa>  # opcional — KSA usada pelo pod de testes (default: "default")
+      cypress_version: 18.16.0  # opcional — versão da imagem cypress/base (default: 18.16.0)
+      environment:              # opcional — env vars injetadas no container de testes
+        CYPRESS_BASE_URL: "https://<app>-dev.bexs.com.br"
+    node_version: "20.10.0"  # opcional — versão do Node.js (default: 18.16.0)
+    go_version: "1.26.3"     # opcional — versão do Go (default: 1.26.3)
 ```
 
 > **Campo `test.service_account`**: quando definido, o `wft_pipeline_selector_step_github` exporta o valor como parâmetro global `test-service-account`, propagado via `podSpecPatch` ao pod do step `golang-automated-tests`. Permite que um repositório use Workload Identity no pod de testes sem alterar os templates compartilhados. A KSA referenciada deve existir no namespace `argo` do cluster tools (`ebb-iac-bexs-platform`). Implementado via EPT-2134.
+
+> **Campo `test.environment.CYPRESS_BASE_URL`**: quando definido, o `wft_pipeline_selector_step_github` lê o valor via `parse()` e exporta como parâmetro global `cypress-base-url`. Este valor é propagado pela cadeia `nodejs-startup-pipeline → automated-tests-selector → nodejs-automated-tests`, onde é injetado como **env var `CYPRESS_BASE_URL`** no container de testes Cypress. Repos sem esse campo não são afetados (env var fica vazia). Implementado via EPT-2461.
 
 ---
 
@@ -173,6 +182,21 @@ Repositório com os **workflows da esteira de CI/CD** baseada em Argo Workflow +
 - Os pods de workflow rodam com a SA **`default`** do namespace `argo` por padrão — sem credenciais GCP.
 - Para customizar a SA do pod de testes de um repositório específico **sem modificar templates compartilhados**, usar `podSpecPatch` com o parâmetro `service-account` lido do `pipeline_config.yaml` (campo `ci.test.service_account`). Esse é o padrão correto — implementado via EPT-2134.
 - **Nunca adicionar credenciais GCP diretamente nos templates compartilhados** — use o padrão opt-in via `pipeline_config.yaml`.
+
+**⚠️ IMPORTANTE — Versão do `yq` no container `mikefarah/yq`:**
+- O container usa `yq` v4 mas **não suporta subcomandos avançados** como `yq e -o=shell`, `yq e -o=p`, nem expressões complexas como `keys | .[]`.
+- **Usar sempre o padrão do `parse()`**: `yq "expression // \"default\"" file.yaml`
+- Ao precisar ler um campo novo do `pipeline_config.yaml`, usar a função `parse()` existente no script (ex: `parse .pipeline.ci.test.environment.CYPRESS_BASE_URL ""`).
+
+**Cadeia de parâmetros da pipeline nodejs (GitHub):**
+```
+pipeline-selector-github
+  → (output params: globalName) → propagados via workflow.outputs.parameters
+    → nodejs-startup-pipeline-github
+      → (arguments) → automated-tests-selector-step-github
+        → (arguments) → nodejs-automated-tests-step-github (container)
+```
+Parâmetros propagados nesta cadeia: `tags`, `repo`, `test-dependencies-commands`, `cypress-base-url`, `node-version`, `cypress-version`.
 
 #### `Platform/ebb-platform-argocd` — Repositório Central de ArgoCD e Flux
 Repositório **principal** para gestão do ArgoCD e infraestrutura de cluster via Flux CD.
