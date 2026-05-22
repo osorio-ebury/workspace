@@ -20,7 +20,7 @@ These rules are **non-negotiable** and must be followed every time an issue is c
 
 ### Description
 
-- **ALWAYS in Portuguese.**
+- **ALWAYS in English.**
 - The description has **exactly 3 parts**, in this exact order:
   1. **Introductory paragraph**: A single paragraph with brief context and motivation. No heading.
   2. **DoR (Definition of Ready)**: The text `"DoR:"` in bold, followed by a bullet list of prerequisites to start the work.
@@ -198,7 +198,7 @@ ISSUE_KEY=$(curl -s -X POST \
         "content": [
           {
             "type": "paragraph",
-            "content": [{ "type": "text", "text": "<breve introdução em Português — contexto e motivação, sem heading>" }]
+            "content": [{ "type": "text", "text": "<brief introduction in English — context and motivation, no heading>" }]
           },
           {
             "type": "paragraph",
@@ -207,7 +207,7 @@ ISSUE_KEY=$(curl -s -X POST \
           {
             "type": "bulletList",
             "content": [
-              { "type": "listItem", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "<pré-requisito 1>" }] }] }
+              { "type": "listItem", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "<prerequisite 1>" }] }] }
             ]
           },
           {
@@ -217,7 +217,7 @@ ISSUE_KEY=$(curl -s -X POST \
           {
             "type": "bulletList",
             "content": [
-              { "type": "listItem", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "<critério de aceite 1>" }] }] }
+              { "type": "listItem", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "<acceptance criteria 1>" }] }] }
             ]
           }
         ]
@@ -302,7 +302,7 @@ When displaying issue data:
 
 - NEVER print or expose the raw `JIRA_API_TOKEN` value in any output.
 - NEVER include `customfield_10007` (sprint) when creating issues — always use Backlog.
-- NEVER write the issue title (`summary`) in Portuguese — it must ALWAYS be in English.
+- NEVER write the issue title (`summary`) or description in Portuguese — both must ALWAYS be in English.
 - NEVER add headings, tables, or extra sections to the description — only: intro paragraph → DoR → DoD.
 - ALWAYS confirm with the user before creating or modifying any issue.
 - ONLY interact with `https://fxsolutions.atlassian.net`.

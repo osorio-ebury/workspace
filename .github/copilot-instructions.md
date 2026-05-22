@@ -1,84 +1,84 @@
-# Regras de Validação GitOps e Infraestrutura GCP
+# GitOps and GCP Infrastructure Validation Rules
 
-## ⚠️ REGRA: Delegação Obrigatória para Agents Especializados
+## ⚠️ RULE: Mandatory Delegation to Specialized Agents
 
-Existem 3 agents especializados neste workspace. **Sempre delegue para o agent apropriado** usando `runSubagent` nas situações listadas abaixo. Não tente executar a tarefa diretamente — o agent possui contexto e ferramentas otimizadas para o caso.
+There are 3 specialized agents in this workspace. **Always delegate to the appropriate agent** using `runSubagent` in the situations listed below. Do not attempt to execute the task directly — the agent has optimized context and tools for the use case.
 
 ### GitOps Audit Agent
-**Invocar SEMPRE que o usuário pedir (explícita ou implicitamente) qualquer uma destas ações:**
-- Auditar uma aplicação (ex: "audita wp-quotes", "verifica wp-pre-validation")
-- Validar consistência cross-environment (dev/stg/prd) de recursos Terraform
-- Verificar IAM bindings, roles, service accounts de uma app
-- Comparar overlays GitOps entre ambientes
-- Diagnosticar problemas em topics, subscriptions, buckets, secrets, ou ExternalSecrets
-- Validar KSA ↔ GSA ↔ Workload Identity bindings
-- Verificar se um recurso Terraform existe nos 3 ambientes
-- Qualquer menção a "auditoria", "audit", "consistência", "cross-env", "validar infra"
+**Invoke ALWAYS when the user asks (explicitly or implicitly) for any of these actions:**
+- Audit an application (e.g., "audit wp-quotes", "check wp-pre-validation")
+- Validate cross-environment consistency (dev/stg/prd) of Terraform resources
+- Verify IAM bindings, roles, service accounts of an app
+- Compare GitOps overlays between environments
+- Diagnose issues in topics, subscriptions, buckets, secrets, or ExternalSecrets
+- Validate KSA ↔ GSA ↔ Workload Identity bindings
+- Check if a Terraform resource exists in all 3 environments
+- Any mention of "auditoria", "audit", "consistência", "consistency", "cross-env", "validar infra", "validate infra"
 
 ### Jira Agent
-**Invocar SEMPRE que o usuário pedir qualquer uma destas ações:**
-- Buscar detalhes de um card/issue (ex: "busca EPT-2134", "o que tem no EPT-2100?")
-- Criar issues, stories, tasks ou bugs no Jira
-- Adicionar comentários em issues
-- Pesquisar issues por filtro, sprint, assignee, ou texto
-- Listar backlog ou sprint atual
-- Qualquer menção a "Jira", "EPT-", "card", "issue", "story", "bug", "task", "sprint", "backlog"
+**Invoke ALWAYS when the user asks for any of these actions:**
+- Fetch details of a card/issue (e.g., "fetch EPT-2134", "what's in EPT-2100?")
+- Create issues, stories, tasks or bugs in Jira
+- Add comments to issues
+- Search issues by filter, sprint, assignee, or text
+- List backlog or current sprint
+- Any mention of "Jira", "EPT-", "card", "issue", "story", "bug", "task", "sprint", "backlog"
 
 ### Confluence Agent
-**Invocar SEMPRE que o usuário pedir qualquer uma destas ações:**
-- Buscar ou ler páginas de documentação no Confluence
-- Criar ou atualizar páginas no Confluence
-- Pesquisar conteúdo em espaços do Confluence (ex: espaço EP)
-- Navegar pela estrutura de páginas (filhos, parent)
-- Qualquer menção a "Confluence", "documentação", "wiki", "página", "page", "espaço EP"
+**Invoke ALWAYS when the user asks for any of these actions:**
+- Fetch or read documentation pages in Confluence
+- Create or update pages in Confluence
+- Search content in Confluence spaces (e.g., EP space)
+- Navigate page structure (children, parent)
+- Any mention of "Confluence", "documentação", "documentation", "wiki", "página", "page", "espaço EP", "EP space"
 
-> **Regra geral**: Se a mensagem do usuário contém palavras-chave de um agent (mesmo sem nomear o agent explicitamente), delegue para ele. Na dúvida, pergunte ao usuário se deseja usar o agent especializado.
+> **General rule**: If the user's message contains keywords from an agent (even without explicitly naming the agent), delegate to it. When in doubt, ask the user if they want to use the specialized agent.
 
 ---
 
-## Estrutura do Workspace
+## Workspace Structure
 
-O workspace raiz (`/home/osorio/Documentos/github/`) contém todos os repositórios organizados da seguinte forma:
+The root workspace (`/home/osorio/Documentos/github/`) contains all repositories organized as follows:
 
-### Times (Pastas com Letra Maiúscula)
-As pastas que começam com letras maiúsculas representam **times/squads**. Dentro de cada time há as pastas das aplicações:
+### Teams (Folders with Capital Letters)
+Folders that start with capital letters represent **teams/squads**. Inside each team are the application folders:
 
-| Time | Pasta | Domínio Terraform | Nota |
-|------|-------|--------------------|------|
-| Webpayments | `Webpayments/` | `ebb-ebury-connect` | Recebeu parte do digitalFx |
-| FinCore (ex-FX) | `FX/` | `ebb-fincore` | Renomeado de FX Engine + FX Tree |
-| FinCrime (ex-Client Journey) | `Client Journey/` | `ebb-fincrime` | Renomeado de Client Journey |
-| Money Flows (ex-Banking) | `Money-Flows/` | `ebb-money-flows` | Renomeado de Banking |
-| Enablers | — | `ebb-enablers` | Novo domínio: digitalFx parcial + portal Ebury Now |
+| Team | Folder | Terraform Domain | Note |
+|------|--------|------------------|------|
+| Webpayments | `Webpayments/` | `ebb-ebury-connect` | Received part of digitalFx |
+| FinCore (ex-FX) | `FX/` | `ebb-fincore` | Renamed from FX Engine + FX Tree |
+| FinCrime (ex-Client Journey) | `Client Journey/` | `ebb-fincrime` | Renamed from Client Journey |
+| Money Flows (ex-Banking) | `Money-Flows/` | `ebb-money-flows` | Renamed from Banking |
+| Enablers | — | `ebb-enablers` | New domain: partial digitalFx + Ebury Now portal |
 
-### Estrutura Interna de Cada Aplicação (dentro do time)
-Cada aplicação dentro da pasta do time segue o padrão de **3 subpastas**:
+### Internal Structure of Each Application (within the team)
+Each application inside the team folder follows the **3 subfolders** pattern:
 
 ```
-<Time>/<nome-app>/
-├── ebb-<nome-app>/              # Código fonte da aplicação
-├── ebb-<nome-app>-gitops/       # Manifests lidos pelo ArgoCD e ArgoWorkflow
-│   ├── application/             # Kustomization do ArgoCD Application
-│   ├── base/                    # Manifests base (Deployment, Service, etc.)
-│   ├── overlays/                # Overlays por ambiente
+<Team>/<app-name>/
+├── ebb-<app-name>/              # Application source code
+├── ebb-<app-name>-gitops/       # Manifests read by ArgoCD and ArgoWorkflow
+│   ├── application/             # ArgoCD Application Kustomization
+│   ├── base/                    # Base manifests (Deployment, Service, etc.)
+│   ├── overlays/                # Overlays per environment
 │   │   ├── ebb-dev/
 │   │   ├── ebb-stg/
 │   │   └── ebb-prd/
-│   └── pipeline_config.yaml     # Configuração da pipeline CI/CD (ArgoWorkflow)
-└── ebb-<nome-app>-tests/        # Testes automatizados (usados pelo ArgoWorkflow)
+│   └── pipeline_config.yaml     # CI/CD pipeline configuration (ArgoWorkflow)
+└── ebb-<app-name>-tests/        # Automated tests (used by ArgoWorkflow)
 ```
 
-**Exemplo real**: `Webpayments/wp-pre-validation/` contém:
-- `ebb-wp-pre-validation/` (Go, código fonte)
-- `ebb-wp-pre-validation-gitops/` (manifests K8s + config de pipeline)
-- `ebb-wp-pre-validation-tests/` (testes BDD com Behave/Python)
+**Real example**: `Webpayments/wp-pre-validation/` contains:
+- `ebb-wp-pre-validation/` (Go, source code)
+- `ebb-wp-pre-validation-gitops/` (K8s manifests + pipeline config)
+- `ebb-wp-pre-validation-tests/` (BDD tests with Behave/Python)
 
-> **Nota**: Ainda existem algumas pastas soltas na raiz do workspace que estão sendo reorganizadas para seguir este padrão de pastas por time.
+> **Note**: There are still some loose folders at the workspace root that are being reorganized to follow this team-based folder pattern.
 
-> **Exceção de overlays**: Alguns repos legados (ex: `bexs-dollar`) usam nomes de overlay diferentes (`staging`, `production`) em vez do padrão `ebb-dev/ebb-stg/ebb-prd`. O step `commit-deploy` do pipeline suporta ambos os padrões.
+> **Overlay exception**: Some legacy repos (e.g., `bexs-dollar`) use different overlay names (`staging`, `production`) instead of the standard `ebb-dev/ebb-stg/ebb-prd`. The pipeline's `commit-deploy` step supports both patterns.
 
-### `pipeline_config.yaml` (Configuração CI/CD)
-Arquivo presente no repositório gitops que define parâmetros da pipeline:
+### `pipeline_config.yaml` (CI/CD Configuration)
+File present in the gitops repository that defines pipeline parameters:
 ```yaml
 pipeline:
   team:
@@ -98,23 +98,23 @@ pipeline:
       cypress_version: 18.16.0  # opcional — versão da imagem cypress/base (default: 18.16.0)
       environment:              # opcional — env vars injetadas no container de testes
         CYPRESS_BASE_URL: "https://<app>-dev.bexs.com.br"
-    node_version: "20.10.0"  # opcional — versão do Node.js (default: 18.16.0)
-    go_version: "1.26.3"     # opcional — versão do Go (default: 1.26.3)
+    node_version: "20.10.0"  # optional — Node.js version (default: 18.16.0)
+    go_version: "1.26.3"     # optional — Go version (default: 1.26.3)
 ```
 
-> **Campo `test.service_account`**: quando definido, o `wft_pipeline_selector_step_github` exporta o valor como parâmetro global `test-service-account`, propagado via `podSpecPatch` ao pod do step `golang-automated-tests`. Permite que um repositório use Workload Identity no pod de testes sem alterar os templates compartilhados. A KSA referenciada deve existir no namespace `argo` do cluster tools (`ebb-iac-bexs-platform`). Implementado via EPT-2134.
+> **Field `test.service_account`**: when defined, `wft_pipeline_selector_step_github` exports the value as global parameter `test-service-account`, propagated via `podSpecPatch` to the `golang-automated-tests` step pod. Allows a repository to use Workload Identity in the test pod without modifying shared templates. The referenced KSA must exist in the `argo` namespace of the tools cluster (`ebb-iac-bexs-platform`). Implemented via EPT-2134.
 
-> **Campo `test.environment.CYPRESS_BASE_URL`**: quando definido, o `wft_pipeline_selector_step_github` lê o valor via `parse()` e exporta como parâmetro global `cypress-base-url`. Este valor é propagado pela cadeia `nodejs-startup-pipeline → automated-tests-selector → nodejs-automated-tests`, onde é injetado como **env var `CYPRESS_BASE_URL`** no container de testes Cypress. Repos sem esse campo não são afetados (env var fica vazia). Implementado via EPT-2461.
+> **Field `test.environment.CYPRESS_BASE_URL`**: when defined, `wft_pipeline_selector_step_github` reads the value via `parse()` and exports it as global parameter `cypress-base-url`. This value is propagated through the chain `nodejs-startup-pipeline → automated-tests-selector → nodejs-automated-tests`, where it's injected as **env var `CYPRESS_BASE_URL`** in the Cypress test container. Repos without this field are not affected (env var remains empty). Implemented via EPT-2461.
 
 ---
 
-### Repositórios da Plataforma (`Platform/`)
+### Platform Repositories (`Platform/`)
 
-#### `Platform/ebb-iac-resource` — Recursos Terraform GCP
-Repositório principal de **infraestrutura como código** para criação de recursos nos projetos GCP.
-- Organizado por domínio e ambiente: `ebb-<dominio>/<env>/`
-- Ambientes: `dev`, `stg`, `prd`
-- Tipos de recursos:
+#### `Platform/ebb-iac-resource` — GCP Terraform Resources
+Main **infrastructure as code** repository for creating resources in GCP projects.
+- Organized by domain and environment: `ebb-<domain>/<env>/`
+- Environments: `dev`, `stg`, `prd`
+- Resource types:
   - `iam/service-accounts/` — Google Service Accounts
   - `iam/roles/` — Custom IAM Roles (general e least privilege)
   - `pub-sub/topics/` e `pub-sub/subscriptions/` — Pub/Sub
@@ -128,33 +128,33 @@ Repositório principal de **infraestrutura como código** para criação de recu
   - `artifact-registry/` — Artifact Registry
   - `compute-engine/` — Compute Engine
   - `kubernetes-engine/` — GKE configs
-  - `project-service/` — APIs habilitadas no projeto
-- Cada recurso possui um `terragrunt.hcl` que referencia um módulo Terraform
-- Domínios existentes: `ebb-ebury-connect`, `ebb-ebury-connect-pci`, `ebb-fincore`, `ebb-fincrime`, `ebb-money-flows`, `ebb-enablers`, `ebb-bigdata`, `ebb-platform`, `ebb-shared-services`
-- Domínios legados (em migração): `ebb-banking`, `ebb-client-journey`, `ebb-fx-engine`
+  - `project-service/` — APIs enabled in the project
+- Each resource has a `terragrunt.hcl` that references a Terraform module
+- Existing domains: `ebb-ebury-connect`, `ebb-ebury-connect-pci`, `ebb-fincore`, `ebb-fincrime`, `ebb-money-flows`, `ebb-enablers`, `ebb-bigdata`, `ebb-platform`, `ebb-shared-services`
+- Legacy domains (under migration): `ebb-banking`, `ebb-client-journey`, `ebb-fx-engine`
 
-#### `Platform/ebb-iac-iams` — Permissões IAM de Grupos
-Repositório para gerenciar **permissões de grupos de usuários** nos projetos GCP.
-- Usado para dar permissão a grupos do Google Workspace (desenvolvedores, tech leads, support, etc.)
-- Estrutura: `ebb-<dominio>/<env>/iam/roles/<NomeRole>/terragrunt.hcl`
-- Exemplos de roles: `EBB_Ebury_Connect_Developer_Dev`, `EBB_Network_Admin_Dev`, `EBB_Security_Engineer_Dev`, `Ebb_Tech_Support_Dev`
-- Cada role define um `google_project_iam_custom_role` com centenas de permissões GCP e faz o bind via `google_project_iam_member` a um grupo de email (ex: `group:ebb.eburyconnect.tech.engineers@ebury.com`)
-- Backend de state no GCS: bucket `ebb-iac-iam-tfstate-<env>`
-- Também possui domínios adicionais: `ebb-organization`, `ebb-security`, `ebb-backup-infra`
-- Possui helpers Python em `helpers/`:
-  - `deploy_terragrunt.py` — Orquestrador de deploy com resolução de dependências (DAG), detecção de changes via git diff, topological sort
-  - `guardrail_labels_terragrunt.py` — Validação de labels obrigatórias nos recursos GCP
-  - `check_deleted_directories.py` — Verifica diretórios deletados para limpeza de state
+#### `Platform/ebb-iac-iams` — Group IAM Permissions
+Repository to manage **user group permissions** in GCP projects.
+- Used to grant permissions to Google Workspace groups (developers, tech leads, support, etc.)
+- Structure: `ebb-<domain>/<env>/iam/roles/<RoleName>/terragrunt.hcl`
+- Role examples: `EBB_Ebury_Connect_Developer_Dev`, `EBB_Network_Admin_Dev`, `EBB_Security_Engineer_Dev`, `Ebb_Tech_Support_Dev`
+- Each role defines a `google_project_iam_custom_role` with hundreds of GCP permissions and binds it via `google_project_iam_member` to an email group (e.g., `group:ebb.eburyconnect.tech.engineers@ebury.com`)
+- State backend in GCS: bucket `ebb-iac-iam-tfstate-<env>`
+- Also has additional domains: `ebb-organization`, `ebb-security`, `ebb-backup-infra`
+- Has Python helpers in `helpers/`:
+  - `deploy_terragrunt.py` — Deploy orchestrator with dependency resolution (DAG), change detection via git diff, topological sort
+  - `guardrail_labels_terragrunt.py` — Validation of mandatory labels on GCP resources
+  - `check_deleted_directories.py` — Checks deleted directories for state cleanup
 
-#### `Platform/Modulos Terraform` — Módulos Terraform Reutilizáveis
-Repositórios de **módulos Terraform** usados como source nos `terragrunt.hcl` dos recursos.
-- Cada módulo é um repositório independente com `main.tf`, `variables.tf`, `outputs.tf`
-- Versionados via tags git (ex: `?ref=v1.3.1`)
-- Módulos disponíveis:
-  - `ebb-terraform-gcp-pubsub` — Topics, subscriptions, schemas (inclui dead letter, retry, push config)
+#### `Platform/Modulos Terraform` — Reusable Terraform Modules
+Repositories of **Terraform modules** used as sources in resource `terragrunt.hcl` files.
+- Each module is an independent repository with `main.tf`, `variables.tf`, `outputs.tf`
+- Versioned via git tags (e.g., `?ref=v1.3.1`)
+- Available modules:
+  - `ebb-terraform-gcp-pubsub` — Topics, subscriptions, schemas (includes dead letter, retry, push config)
   - `ebb-terraform-gcp-service-account` — Service accounts + IAM bindings + project IAM members
   - `ebb-terraform-gcp-cloud-storage` — Buckets + transfer jobs (CORS, lifecycle, versioning)
-  - `ebb-terraform-gcp-iam` — Custom roles + IAM members (usado pelo ebb-iac-iams)
+  - `ebb-terraform-gcp-iam` — Custom roles + IAM members (used by ebb-iac-iams)
   - `ebb-terraform-gcp-cloud-functions` — Cloud Functions
   - `ebb-terraform-gcp-cloud-run` — Cloud Run services
   - `ebb-terraform-gcp-cloud-dns` — Cloud DNS
@@ -164,42 +164,42 @@ Repositórios de **módulos Terraform** usados como source nos `terragrunt.hcl` 
   - `ebb-terraform-gcp-compliance-scc` — Security Command Center
   - `ebb-terraform-gcp-cloud-build-github-connector` — Cloud Build GitHub connector
 
-#### `Platform/platform-cicd` — Workflows CI/CD (Argo Workflow)
-Repositório com os **workflows da esteira de CI/CD** baseada em Argo Workflow + Argo Events.
-- **Sensor** (`sensor.yaml`): Escuta webhooks do Bitbucket/GitHub via Pub/Sub, filtra PRs merged em `master`/`main`/`develop`, e cria Workflows
+#### `Platform/platform-cicd` — CI/CD Workflows (Argo Workflow)
+Repository with **CI/CD pipeline workflows** based on Argo Workflow + Argo Events.
+- **Sensor** (`sensor.yaml`): Listens to Bitbucket/GitHub webhooks via Pub/Sub, filters PRs merged to `master`/`main`/`develop`, and creates Workflows
 - **Workflow Templates** (`manifests/workflows/`):
-  - `wft_base_startup.yaml` — Entry point que detecta tipo (golang/nodejs) e direciona pipeline
-  - `wft_golang_startup_pipeline.yaml` / `wft_nodejs_startup_pipeline.yaml` — Pipelines por linguagem
-  - Steps disponíveis: build+test, image build, commit deploy, automated tests, approval, deployment, scan (Semgrep, Snyk, Trivy), notifications (Slack)
-  - Variantes `_github.yaml` para repositórios no GitHub (vs Bitbucket)
-- **CD** (`manifests/cd/`): Template de ArgoCD ApplicationSet para deploy em staging/sandbox/production
-- **Standard Service** (`manifests/standard-service/`): Base + overlays para configuração padrão de serviços
-- **Configs** (`conf/`): Secrets e credentials para ArgoCD, Bitbucket, Snyk, NPM, storage
+  - `wft_base_startup.yaml` — Entry point that detects type (golang/nodejs) and directs pipeline
+  - `wft_golang_startup_pipeline.yaml` / `wft_nodejs_startup_pipeline.yaml` — Pipelines per language
+  - Available steps: build+test, image build, commit deploy, automated tests, approval, deployment, scan (Semgrep, Snyk, Trivy), notifications (Slack)
+  - `_github.yaml` variants for GitHub repositories (vs Bitbucket)
+- **CD** (`manifests/cd/`): ArgoCD ApplicationSet template for deployment to staging/sandbox/production
+- **Standard Service** (`manifests/standard-service/`): Base + overlays for standard service configuration
+- **Configs** (`conf/`): Secrets and credentials for ArgoCD, Bitbucket, Snyk, NPM, storage
 
-**⚠️ IMPORTANTE — Templates e Sensor são compartilhados por TODOS os repositórios:**
-- O **Sensor `pubsub-sensor-github`** é único e dispara workflows para qualquer repositório GitHub que mergear PR. Não é específico de nenhum repositório.
-- Os **Workflow Templates** (`wft_*`) são usados por todos os times. Mudanças neles afetam toda a organização.
-- Os pods de workflow rodam com a SA **`default`** do namespace `argo` por padrão — sem credenciais GCP.
-- Para customizar a SA do pod de testes de um repositório específico **sem modificar templates compartilhados**, usar `podSpecPatch` com o parâmetro `service-account` lido do `pipeline_config.yaml` (campo `ci.test.service_account`). Esse é o padrão correto — implementado via EPT-2134.
-- **Nunca adicionar credenciais GCP diretamente nos templates compartilhados** — use o padrão opt-in via `pipeline_config.yaml`.
+**⚠️ IMPORTANT — Templates and Sensor are shared by ALL repositories:**
+- The **Sensor `pubsub-sensor-github`** is unique and triggers workflows for any GitHub repository that merges a PR. It's not repository-specific.
+- The **Workflow Templates** (`wft_*`) are used by all teams. Changes to them affect the entire organization.
+- Workflow pods run with the **`default`** SA in the `argo` namespace by default — without GCP credentials.
+- To customize the SA of the test pod for a specific repository **without modifying shared templates**, use `podSpecPatch` with the `service-account` parameter read from `pipeline_config.yaml` (field `ci.test.service_account`). This is the correct pattern — implemented via EPT-2134.
+- **Never add GCP credentials directly to shared templates** — use the opt-in pattern via `pipeline_config.yaml`.
 
-**⚠️ IMPORTANTE — Versão do `yq` no container `mikefarah/yq`:**
-- O container usa `yq` v4 mas **não suporta subcomandos avançados** como `yq e -o=shell`, `yq e -o=p`, nem expressões complexas como `keys | .[]`.
-- **Usar sempre o padrão do `parse()`**: `yq "expression // \"default\"" file.yaml`
-- Ao precisar ler um campo novo do `pipeline_config.yaml`, usar a função `parse()` existente no script (ex: `parse .pipeline.ci.test.environment.CYPRESS_BASE_URL ""`).
+**⚠️ IMPORTANT — `yq` version in `mikefarah/yq` container:**
+- The container uses `yq` v4 but **does not support advanced subcommands** like `yq e -o=shell`, `yq e -o=p`, nor complex expressions like `keys | .[]`.
+- **Always use the `parse()` pattern**: `yq "expression // \"default\"" file.yaml`
+- When needing to read a new field from `pipeline_config.yaml`, use the existing `parse()` function in the script (e.g., `parse .pipeline.ci.test.environment.CYPRESS_BASE_URL ""`).
 
-**Cadeia de parâmetros da pipeline nodejs (GitHub):**
+**Node.js pipeline parameter chain (GitHub):**
 ```
 pipeline-selector-github
-  → (output params: globalName) → propagados via workflow.outputs.parameters
+  → (output params: globalName) → propagated via workflow.outputs.parameters
     → nodejs-startup-pipeline-github
       → (arguments) → automated-tests-selector-step-github
         → (arguments) → nodejs-automated-tests-step-github (container)
 ```
-Parâmetros propagados nesta cadeia: `tags`, `repo`, `test-dependencies-commands`, `cypress-base-url`, `node-version`, `cypress-version`.
+Parameters propagated in this chain: `tags`, `repo`, `test-dependencies-commands`, `cypress-base-url`, `node-version`, `cypress-version`.
 
-#### `Platform/ebb-platform-argocd` — Repositório Central de ArgoCD e Flux
-Repositório **principal** para gestão do ArgoCD e infraestrutura de cluster via Flux CD.
+#### `Platform/ebb-platform-argocd` — ArgoCD and Flux Central Repository
+**Main** repository for ArgoCD management and cluster infrastructure via Flux CD.
 
 **Arquitetura de Bootstrap (Flux → ArgoCD):**
 ```
@@ -252,21 +252,21 @@ ebb-platform-argocd/
 └── metadata-bootstrap.yaml            # Aplica **/_metadata/*.yaml recursivamente
 ```
 
-**Instalação do ArgoCD (via Flux):**
-Cada `argocd-install/<env>/` contém:
+**ArgoCD Installation (via Flux):**
+Each `argocd-install/<env>/` contains:
 
-| Arquivo | Tipo | Propósito |
-|---------|------|-----------|
-| `argocd-helmrelease-minimal.yaml` | `HelmRelease` (Flux) | Instala chart `argo-cd` v9.3.1 no namespace `argocd` |
-| `argocd-helmrepository.yaml` | `HelmRepository` (Flux) | Fonte: `argoproj.github.io/argo-helm` |
-| `argocd-gw-vs.yaml` | Istio Gateway/VS | Ingress interno (dev/stg: Gateway próprio, prd: shared gateway) |
-| `argocd-svc.yaml` | Service | ClusterIP para argocd-server |
+| File | Type | Purpose |
+|------|------|---------|
+| `argocd-helmrelease-minimal.yaml` | `HelmRelease` (Flux) | Installs `argo-cd` chart v9.3.1 in the `argocd` namespace |
+| `argocd-helmrepository.yaml` | `HelmRepository` (Flux) | Source: `argoproj.github.io/argo-helm` |
+| `argocd-gw-vs.yaml` | Istio Gateway/VS | Internal ingress (dev/stg: own Gateway, prd: shared gateway) |
+| `argocd-svc.yaml` | Service | ClusterIP for argocd-server |
 | `argocd-oauth-external-secret.yaml` | ExternalSecret | GitHub OAuth via GCP Secret Manager |
 | `namespace.yaml` | Namespace | `argocd` (istio-injection: disabled) |
-| `kustomization.yaml` | Kustomize | Agrupa os arquivos acima |
-| `repo-secret.yaml` | Secret | SSH key para acessar repos (comentado no kustomization) |
+| `kustomization.yaml` | Kustomize | Groups the above files |
+| `repo-secret.yaml` | Secret | SSH key to access repos (commented in kustomization) |
 
-**Diferenças por ambiente:**
+**Differences per environment:**
 
 | Config | DEV | STG | PRD |
 |--------|-----|-----|-----|
@@ -276,9 +276,9 @@ Cada `argocd-install/<env>/` contém:
 | applicationSet replicas | 1 | 1 | 2 (anti-affinity) |
 | Istio Gateway | Próprio | Próprio | Shared (`internal-shared-gateway`) |
 
-**Cluster IPs por domínio:**
+**Cluster IPs per domain:**
 
-| Domínio | DEV | STG | PRD |
+| Domain | DEV | STG | PRD |
 |---------|-----|-----|-----|
 | ebb-platform | `10.7.255.2` | `10.107.255.2` | `10.207.255.2` |
 | ebb-client-journey | `10.27.255.2` | `10.127.255.2` | `10.227.255.2` |
@@ -290,12 +290,12 @@ Cada `argocd-install/<env>/` contém:
 
 | Resource | Kind | Propósito |
 |----------|------|-----------|
-| `flux-system` | `GitRepository` | Aponta para `ebb-platform-argocd.git` (branch main) |
-| `flux-system` | `Kustomization` | Aplica `./clusters/gke_ebb-platform-<env>` (interval: 10m) |
-| `platform-resources` | `Kustomization` | Aplica `./clusters/gke_ebb-platform-<env>/resources` (interval: 5m, dependsOn: flux-system) |
+| `flux-system` | `GitRepository` | Points to `ebb-platform-argocd.git` (branch main) |
+| `flux-system` | `Kustomization` | Applies `./clusters/gke_ebb-platform-<env>` (interval: 10m) |
+| `platform-resources` | `Kustomization` | Applies `./clusters/gke_ebb-platform-<env>/resources` (interval: 5m, dependsOn: flux-system) |
 
-**Padrão de ApplicationSet no `bootstrap/`:**
-Cada arquivo usa um **List generator** com hardcoded elements:
+**ApplicationSet pattern in `bootstrap/`:**
+Each file uses a **List generator** with hardcoded elements:
 ```yaml
 generators:
   - list:
@@ -305,10 +305,10 @@ generators:
           path: ebb-ebury-connect/dev/<service>
           cluster_ip: "10.11.255.2"
 ```
-Todos apontam `repoURL: git@github.com:Ebury-Brazil/ebb-platform-argocd.git`, `targetRevision: HEAD`.
+All point to `repoURL: git@github.com:Ebury-Brazil/ebb-platform-argocd.git`, `targetRevision: HEAD`.
 
-**Padrão de serviço nos domínios (`<domain>/<env>/<service>/`):**
-Usa `helmCharts:` no `kustomization.yaml` (Kustomize nativo, **não** Flux HelmRelease):
+**Service pattern in domains (`<domain>/<env>/<service>/`):**
+Uses `helmCharts:` in `kustomization.yaml` (native Kustomize, **not** Flux HelmRelease):
 ```yaml
 helmCharts:
   - name: external-secrets
@@ -321,21 +321,21 @@ resources:
   - k8s-manifests/cluster-secret-store.yaml
 ```
 
-#### `Platform/ebb-argocd-manifests-repo` — ⚠️ LEGADO (em migração para ebb-platform-argocd)
-> **Status**: Este repositório está sendo descontinuado. Os manifests de instalação do ArgoCD foram migrados para `ebb-platform-argocd/argocd-install/`. A migração está sendo feita por ambiente (DEV primeiro, depois STG, depois PRD). Ref: EPT-2068.
+#### `Platform/ebb-argocd-manifests-repo` — ⚠️ LEGACY (migrating to ebb-platform-argocd)
+> **Status**: This repository is being discontinued. ArgoCD installation manifests have been migrated to `ebb-platform-argocd/argocd-install/`. Migration is being done per environment (DEV first, then STG, then PRD). Ref: EPT-2068.
 
-Repositório legado de manifests do ArgoCD, com HelmRelease por ambiente.
-- Estrutura original: `ebb-argocd-{dev,stg,prd}/` — mesmos 8 arquivos agora em `ebb-platform-argocd/argocd-install/`
-- Contém a configuração RBAC (policy.csv) com controle de acesso por AppProject
-- AppProjects, ApplicationSets, e Apps ficam em `appprojects/`, `applicationsets/`, `apps/` (templates/exemplos)
-- CI/CD: `.github/workflows/create-app.yml` — scaffold automático de app via GitHub Issue
-- Scripts: `scripts/new-app.sh` — scaffold de estrutura gitops (base + overlays)
+Legacy ArgoCD manifests repository, with HelmRelease per environment.
+- Original structure: `ebb-argocd-{dev,stg,prd}/` — same 8 files now in `ebb-platform-argocd/argocd-install/`
+- Contains RBAC configuration (policy.csv) with access control per AppProject
+- AppProjects, ApplicationSets, and Apps are in `appprojects/`, `applicationsets/`, `apps/` (templates/examples)
+- CI/CD: `.github/workflows/create-app.yml` — automatic app scaffolding via GitHub Issue
+- Scripts: `scripts/new-app.sh` — gitops structure scaffolding (base + overlays)
 
-**Regras RBAC ArgoCD** (configuradas no `argocd-helmrelease-minimal.yaml` de cada env):
+**ArgoCD RBAC Rules** (configured in `argocd-helmrelease-minimal.yaml` for each env):
 
-| Time GitHub | Role ArgoCD | AppProject |
+| GitHub Team | ArgoCD Role | AppProject |
 |-------------|-------------|------------|
-| EBB Platform Team | admin | (acesso total) |
+| EBB Platform Team | admin | (full access) |
 | EBB FinCrime | fincrime-dev | ebb-fincrime |
 | EBB FinCore | fincore-dev | ebb-fincore |
 | EBB Money Flows | money-flows-dev | ebb-money-flows |
@@ -343,91 +343,91 @@ Repositório legado de manifests do ArgoCD, com HelmRelease por ambiente.
 | EBB Ebury Connect Webpayments | ebury-connect-dev | ebb-ebury-connect |
 | EBB Ebury Connect Pay | ebury-connect-pci-dev | ebb-ebury-connect-pci |
 | EBB Data | data-dev | ebb-data |
-| EBB FrontEnd-Shared | frontend-shared | permissões nas apps que acessam |
-| EBB-BackEnd-Shared | backend-shared | permissões nas apps que acessam |
+| EBB FrontEnd-Shared | frontend-shared | permissions on accessed apps |
+| EBB-BackEnd-Shared | backend-shared | permissions on accessed apps |
 
-**Permissões por ambiente (apps com sufixo -dev, -stg, -prd):**
+**Permissions per environment (apps with suffix -dev, -stg, -prd):**
 - `-dev` / `-stg`: get, logs, sync, override, action/*
-- `-prd`: somente get + logs (read-only)
+- `-prd`: only get + logs (read-only)
 
-**Renomeação de domínios (2026):**
+**Domain renaming (2026):**
 - Client Journey → **FinCrime**
 - FX (Engine + Tree) → **FinCore**
 - Banking → **Money Flows**
-- **Enablers** = novo domínio (digitalFx parcial + portal Ebury Now)
-- **Ebury Connect** recebeu outra parte do digitalFx
+- **Enablers** = new domain (partial digitalFx + Ebury Now portal)
+- **Ebury Connect** received another part of digitalFx
 
 ---
 
-## ⚠️ REGRA FUNDAMENTAL: Consistência entre Ambientes
+## ⚠️ FUNDAMENTAL RULE: Cross-Environment Consistency
 
-**Todos os recursos Terraform (topics, subscriptions, buckets, secrets, roles, service accounts) devem existir de forma equivalente nos 3 ambientes (dev, stg, prd).**
+**All Terraform resources (topics, subscriptions, buckets, secrets, roles, service accounts) must exist equivalently in all 3 environments (dev, stg, prd).**
 
-### Princípio
-Se um recurso existe em um ambiente, o equivalente deve existir nos outros dois. Isso inclui:
-- O recurso em si (topic, subscription, bucket, etc.)
-- O bloco `iam_members` com permissões equivalentes
-- As `dependency` blocks correspondentes (role e service account do ambiente)
-- Dead letter topics e subscriptions associados
+### Principle
+If a resource exists in one environment, the equivalent must exist in the other two. This includes:
+- The resource itself (topic, subscription, bucket, etc.)
+- The `iam_members` block with equivalent permissions
+- The corresponding `dependency` blocks (role and service account for the environment)
+- Associated dead letter topics and subscriptions
 
-### Ao criar ou modificar um recurso
-1. **Sempre verificar os 3 ambientes** (dev, stg, prd) para o mesmo recurso
-2. Se faltar em algum ambiente, criar o equivalente adaptando:
-   - Nome do projeto GCP (`ebb-ebury-connect-dev`, `ebb-ebury-connect-staging`, `ebb-ebury-connect-prod`)
-   - Sufixo da role (`_dev`, `_stg`, `_prd` — ou variantes como `_dev2`, `_stg_v2`, `_prd_v2`)
-   - Project number do Pub/Sub service agent (para `gcp-sa-pubsub`)
-3. Se um `iam_member` existe em um ambiente, o equivalente deve existir nos outros
+### When creating or modifying a resource
+1. **Always check all 3 environments** (dev, stg, prd) for the same resource
+2. If missing in any environment, create the equivalent by adapting:
+   - GCP project name (`ebb-ebury-connect-dev`, `ebb-ebury-connect-staging`, `ebb-ebury-connect-prod`)
+   - Role suffix (`_dev`, `_stg`, `_prd` — or variants like `_dev2`, `_stg_v2`, `_prd_v2`)
+   - Pub/Sub service agent project number (for `gcp-sa-pubsub`)
+3. If an `iam_member` exists in one environment, the equivalent must exist in the others
 
-> **Auditorias cross-environment**: Use o **GitOps Audit Agent** para validações detalhadas.
+> **Cross-environment audits**: Use the **GitOps Audit Agent** for detailed validations.
 
 ---
 
-## ⚠️ IMPORTANTE: Workflow Git
+## ⚠️ IMPORTANT: Git Workflow
 
-**SEMPRE antes de fazer validações ou adicionar/modificar conteúdo:**
+**ALWAYS before performing validations or adding/modifying content:**
 
-1. **Verificar branch atual**:
+1. **Check current branch**:
 ```bash
 git branch --show-current
 ```
 
-2. **Mudar para branch main/master** (se não estiver):
+2. **Switch to main/master branch** (if not already):
 ```bash
 git checkout main
 ```
 
-3. **Atualizar repositório**:
+3. **Update repository**:
 ```bash
 git pull
 ```
 
-4. **Verificar status** para garantir que está limpo:
+4. **Check status** to ensure it's clean:
 ```bash
 git status
 ```
 
-**Regra**: Nunca faça validações ou modificações sem antes garantir que está na branch principal e com o código atualizado.
+**Rule**: Never perform validations or modifications without first ensuring you're on the main branch with updated code.
 
 ---
 
-## ⚠️ IMPORTANTE: Convenção de Commits e PRs (Terragrunt)
+## ⚠️ IMPORTANT: Commit and PR Convention (Terragrunt)
 
-**A pipeline de Terragrunt (`ebb-terragrunt-setup-pipeline.yml`) valida automaticamente o número do card do Jira em todo PR antes do plan.** Se ausente, o PR será bloqueado.
+**The Terragrunt pipeline (`ebb-terragrunt-setup-pipeline.yml`) automatically validates the Jira card number in every PR before the plan.** If missing, the PR will be blocked.
 
-### Formato obrigatório
+### Mandatory format
 ```
-type(scope): descrição [EPT-XXXX]
+type(scope): description [EPT-XXXX]
 ```
 
 - `type`: `feat`, `fix`, `chore`, `refactor`, `docs`, `ci`, `test`, `perf`, `style`
-- `scope` (opcional): contexto do change (ex: `iam`, `pubsub`, `storage`)
-- `[EPT-XXXX]`: número do card do Jira, **obrigatório** no final entre colchetes
+- `scope` (optional): change context (e.g., `iam`, `pubsub`, `storage`)
+- `[EPT-XXXX]`: Jira card number, **mandatory** at the end in brackets
 
-### Onde aplicar
-- **Título do PR** → `feat: add IAM bindings for payment topics [EPT-2063]`
-- **Mensagem do commit** → `fix: resolve auth token refresh [EPT-2063]`
+### Where to apply
+- **PR title** → `feat: add IAM bindings for payment topics [EPT-2063]`
+- **Commit message** → `fix: resolve auth token refresh [EPT-2063]`
 
-### Exemplos
+### Examples
 ```
 feat: add IAM bindings for payment topics [EPT-2063]
 fix: resolve auth token refresh [EPT-2063]
@@ -436,47 +436,49 @@ feat(pubsub): create dead letter topic for wp-quotes [EPT-2100]
 refactor(iam): consolidate least privilege roles [EPT-2150]
 ```
 
-### Regras
-- Sempre adicionar `[EPT-XXXX]` no final da mensagem entre colchetes
-- A pipeline bloqueará o PR se o número do card estiver ausente no título do PR ou no último commit
-- Ao gerar commits ou títulos de PR para repositórios Terraform/Terragrunt, **sempre incluir o card do Jira** — perguntar ao usuário se não fornecido
+### Rules
+- Always add `[EPT-XXXX]` at the end of the message in brackets
+- The pipeline will block the PR if the card number is missing from the PR title or the last commit
+- When generating commits or PR titles for Terraform/Terragrunt repositories, **always include the Jira card** — ask the user if not provided
+- **Always use `gh` CLI to create PRs**: `gh pr create --title "..." --body "..."`
+- **Always write PR titles and descriptions in English** — this is mandatory for all repositories
 
 ---
 
-## ⚠️ IMPORTANTE: Formatação Terragrunt
+## ⚠️ IMPORTANT: Terragrunt Formatting
 
-**SEMPRE após editar arquivos `terragrunt.hcl`**, executar o formatador:
+**ALWAYS after editing `terragrunt.hcl` files**, run the formatter:
 
 ```bash
 terragrunt hcl fmt
 ```
 
-**Regras**:
-- Rodar `terragrunt hcl fmt` na raiz do repositório `ebb-iac-resource` (ou `ebb-iac-iams`) após qualquer edição de `.hcl`
-- Se o comando reportar erros de sintaxe (ex: `Missing item separator`), corrigir os erros antes de commitar
-- **Causa comum de erro**: último entry de um bloco `iam_members` (ou similar) sem vírgula trailing antes de adicionar um novo entry
-- O comando é idempotente — pode rodar múltiplas vezes sem efeito colateral
-- **NUNCA commitar arquivos `.hcl` sem antes formatar**
+**Rules**:
+- Run `terragrunt hcl fmt` at the root of the `ebb-iac-resource` (or `ebb-iac-iams`) repository after any `.hcl` edit
+- If the command reports syntax errors (e.g., `Missing item separator`), fix the errors before committing
+- **Common error cause**: last entry of an `iam_members` block (or similar) without a trailing comma before adding a new entry
+- The command is idempotent — can be run multiple times without side effects
+- **NEVER commit `.hcl` files without formatting first**
 
-> **Nota**: Versões mais novas do Terragrunt usam `terragrunt hcl fmt` (com espaço), não `terragrunt hclfmt`.
+> **Note**: Newer Terragrunt versions use `terragrunt hcl fmt` (with space), not `terragrunt hclfmt`.
 
 ---
 
-#### `Platform/ebb-iac-bexs-platform` — Cluster Tools (Argo Workflow + ArgoCD Legado)
-Repositório gerenciado pelo **Flux CD** que mantém o estado do **cluster tools** (`gke_tools`), onde rodam o Argo Workflow, Argo Events e o ArgoCD legado (em migração).
+#### `Platform/ebb-iac-bexs-platform` — Cluster Tools (Argo Workflow + Legacy ArgoCD)
+Repository managed by **Flux CD** that maintains the **tools cluster** (`gke_tools`) state, where Argo Workflow, Argo Events, and legacy ArgoCD (under migration) run.
 
-- Branch principal: **`master`** (não `main`)
-- Projeto GCP do cluster: **`bexs-platform`**
-- O Flux reconcilia os recursos em `gke/gke_tools/flux-system/kustomization.yaml`, que referencia os manifests em `gke/gke_tools/resources/`
-- Para adicionar um novo recurso Kubernetes no cluster tools (ex: ServiceAccount, Role, ConfigMap), criar o arquivo YAML em `gke/gke_tools/resources/` e referenciar em `gke/gke_tools/flux-system/kustomization.yaml`
+- Main branch: **`master`** (not `main`)
+- Cluster GCP project: **`bexs-platform`**
+- Flux reconciles resources in `gke/gke_tools/flux-system/kustomization.yaml`, which references manifests in `gke/gke_tools/resources/`
+- To add a new Kubernetes resource to the tools cluster (e.g., ServiceAccount, Role, ConfigMap), create the YAML file in `gke/gke_tools/resources/` and reference it in `gke/gke_tools/flux-system/kustomization.yaml`
 
-**KSAs para pods de testes do Argo Workflow:**
-- Os pods de workflow rodam no namespace **`argo`** do cluster tools
-- KSAs dedicadas para testes com Workload Identity devem ser criadas neste repositório em `gke/gke_tools/resources/serviceaccount-<nome>.yaml`
-- A GCP SA correspondente fica no projeto **`bexs-platform`** (não nos projetos de domínio `ebb-ebury-connect-*`)
-- WI binding: `serviceAccount:bexs-platform.svc.id.goog[argo/<nome-ksa>]`
+**KSAs for Argo Workflow test pods:**
+- Workflow pods run in the **`argo`** namespace of the tools cluster
+- Dedicated KSAs for tests with Workload Identity must be created in this repository in `gke/gke_tools/resources/serviceaccount-<name>.yaml`
+- The corresponding GCP SA is in the **`bexs-platform`** project (not in domain projects `ebb-ebury-connect-*`)
+- WI binding: `serviceAccount:bexs-platform.svc.id.goog[argo/<ksa-name>]`
 
-**Exemplo de KSA para testes:**
+**Example KSA for tests:**
 ```yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -489,66 +491,66 @@ metadata:
 
 ---
 
-## Resumo Rápido de Caminhos
-- Aplicações: `<Time>/<nome-app>/ebb-<nome-app>/` (código fonte)
-- GitOps: `<Time>/<nome-app>/ebb-<nome-app>-gitops/` (manifests Kubernetes + ArgoCD + ArgoWorkflow)
-- Testes: `<Time>/<nome-app>/ebb-<nome-app>-tests/` (testes automatizados)
-- Recursos Terraform: `Platform/ebb-iac-resource/ebb-<dominio>/<env>/` (infraestrutura GCP)
-- IAMs de Grupos: `Platform/ebb-iac-iams/ebb-<dominio>/<env>/iam/roles/` (permissões de grupos)
-- Módulos Terraform: `Platform/Modulos Terraform/ebb-terraform-gcp-<recurso>/` (módulos reutilizáveis)
-- CI/CD Workflows: `Platform/platform-cicd/` (Argo Workflow templates e sensors)
-- Cluster Tools (Argo + CI): `Platform/ebb-iac-bexs-platform/gke/gke_tools/` (recursos do cluster tools via Flux, branch **master**)
-- ArgoCD + Flux: `Platform/ebb-platform-argocd/` (instalação ArgoCD, bootstrap ApplicationSets, configs por domínio)
+## Quick Path Reference
+- Applications: `<Team>/<app-name>/ebb-<app-name>/` (source code)
+- GitOps: `<Team>/<app-name>/ebb-<app-name>-gitops/` (Kubernetes manifests + ArgoCD + ArgoWorkflow)
+- Tests: `<Team>/<app-name>/ebb-<app-name>-tests/` (automated tests)
+- Terraform Resources: `Platform/ebb-iac-resource/ebb-<domain>/<env>/` (GCP infrastructure)
+- Group IAMs: `Platform/ebb-iac-iams/ebb-<domain>/<env>/iam/roles/` (group permissions)
+- Terraform Modules: `Platform/Modulos Terraform/ebb-terraform-gcp-<resource>/` (reusable modules)
+- CI/CD Workflows: `Platform/platform-cicd/` (Argo Workflow templates and sensors)
+- Cluster Tools (Argo + CI): `Platform/ebb-iac-bexs-platform/gke/gke_tools/` (tools cluster resources via Flux, branch **master**)
+- ArgoCD + Flux: `Platform/ebb-platform-argocd/` (ArgoCD installation, bootstrap ApplicationSets, configs per domain)
 - ArgoCD Install: `Platform/ebb-platform-argocd/argocd-install/<env>/` (HelmRelease + HelmRepository + Istio)
 - Flux Clusters: `Platform/ebb-platform-argocd/clusters/gke_ebb-platform-<env>/` (gotk-sync, argocd-install ref)
-- ArgoCD Legado: `Platform/ebb-argocd-manifests-repo/` (⚠️ em migração → ebb-platform-argocd)
+- Legacy ArgoCD: `Platform/ebb-argocd-manifests-repo/` (⚠️ migrating → ebb-platform-argocd)
 
-> **Auditorias GitOps/Terraform**: Use o **GitOps Audit Agent** para validar overlays, IAM, PubSub, External Secrets e consistência cross-environment.
+> **GitOps/Terraform Audits**: Use the **GitOps Audit Agent** to validate overlays, IAM, PubSub, External Secrets, and cross-environment consistency.
 
-## Padrões de Nomenclatura
+## Naming Patterns
 
-### Ambientes
-- `dev` ou `ebb-dev`: Desenvolvimento
-- `stg` ou `ebb-stg`: Staging
-- `prd` ou `ebb-prd`: Produção
+### Environments
+- `dev` or `ebb-dev`: Development
+- `stg` or `ebb-stg`: Staging
+- `prd` or `ebb-prd`: Production
 
-### Projetos GCP e Project Numbers
+### GCP Projects and Project Numbers
 
-| Ambiente | Project ID | Project Number | Pub/Sub Service Agent |
+| Environment | Project ID | Project Number | Pub/Sub Service Agent |
 |----------|-----------|----------------|------------------------|
 | dev | `ebb-ebury-connect-dev` | `181368734837` | `service-181368734837@gcp-sa-pubsub.iam.gserviceaccount.com` |
 | stg | `ebb-ebury-connect-staging` | `117934984866` | `service-117934984866@gcp-sa-pubsub.iam.gserviceaccount.com` |
 | prd | `ebb-ebury-connect-prod` | `492685761630` | `service-492685761630@gcp-sa-pubsub.iam.gserviceaccount.com` |
 
-> O Pub/Sub service agent é usado em DL topics com `roles/pubsub.publisher` e em subscriptions com DL usando `roles/pubsub.subscriber`.
+> The Pub/Sub service agent is used in DL topics with `roles/pubsub.publisher` and in subscriptions with DL using `roles/pubsub.subscriber`.
 
 ### Service Accounts
 
-**⚠️ REGRA: Todas as Service Accounts (GCP e Kubernetes) devem obrigatoriamente ter o prefixo `ebb-`.**
+**⚠️ RULE: All Service Accounts (GCP and Kubernetes) must have the `ebb-` prefix.**
 
-- GCP (aplicação): `ebb-<nome-app>@ebb-ebury-connect-<env>.iam.gserviceaccount.com`
-- GCP (testes CI): `ebb-<nome-app>-test@bexs-platform.iam.gserviceaccount.com`
-- K8s (aplicação): `ebb-<nome-app>`
-- K8s (testes CI): `ebb-<nome-app>-test` (namespace `argo` no cluster tools)
+- GCP (application): `ebb-<app-name>@ebb-ebury-connect-<env>.iam.gserviceaccount.com`
+- GCP (CI tests): `ebb-<app-name>-test@bexs-platform.iam.gserviceaccount.com`
+- K8s (application): `ebb-<app-name>`
+- K8s (CI tests): `ebb-<app-name>-test` (namespace `argo` in tools cluster)
 
-**Exemplos corretos:**
-- `ebb-wp-portal-api@ebb-ebury-connect-dev.iam.gserviceaccount.com` (SA de aplicação)
-- `ebb-wp-hedges-test@bexs-platform.iam.gserviceaccount.com` (SA de testes)
-- `ebb-wp-uploads-test` (KSA de testes no cluster tools)
+**Correct examples:**
+- `ebb-wp-portal-api@ebb-ebury-connect-dev.iam.gserviceaccount.com` (application SA)
+- `ebb-wp-hedges-test@bexs-platform.iam.gserviceaccount.com` (test SA)
+- `ebb-wp-uploads-test` (test KSA in tools cluster)
 
-**Exemplos incorretos:**
-- ~~`wp-portal-api-test@bexs-platform.iam.gserviceaccount.com`~~ (falta prefixo `ebb-`)
-- ~~`hedges-test@bexs-platform.iam.gserviceaccount.com`~~ (falta prefixo `ebb-` e `wp-`)
+**Incorrect examples:**
+- ~~`wp-portal-api-test@bexs-platform.iam.gserviceaccount.com`~~ (missing `ebb-` prefix)
+- ~~`hedges-test@bexs-platform.iam.gserviceaccount.com`~~ (missing `ebb-` and `wp-` prefixes)
 
-> Para SAs de testes do time Webpayments, o padrão é `ebb-wp-<nome>-test` (mantém o prefixo `wp-` do time).
+> For Webpayments team test SAs, the pattern is `ebb-wp-<name>-test` (keeps the team's `wp-` prefix).
 
 ### Roles
-- General: `ebb_<nome_app>_general_privilege_role_<env>`
-- Least: `ebb_<nome_app>_least_privilege_role_<env>`
-- Least (testes CI): `ebb_<nome_app>_test_least_privilege_role_<env>`
+- General: `ebb_<app_name>_general_privilege_role_<env>`
+- Least: `ebb_<app_name>_least_privilege_role_<env>`
+- Least (CI tests): `ebb_<app_name>_test_least_privilege_role_<env>`
 
-### Recursos GCP
-- Buckets: `ebb-<nome>-<env>`
-- Topics: `ebb-<nome>-topic`
-- Subscriptions: `ebb-<nome>-sub`
-- Secrets: `ebb-<nome-app>`
+### GCP Resources
+- Buckets: `ebb-<name>-<env>`
+- Topics: `ebb-<name>-topic`
+- Subscriptions: `ebb-<name>-sub`
+- Secrets: `ebb-<app-name>`

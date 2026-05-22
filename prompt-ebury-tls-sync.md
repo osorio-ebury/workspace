@@ -1,6 +1,6 @@
 # Prompt: Implementar sincronização do certificado ebury-tls para outro domínio
 
-Estou com o card EPT-2395. Preciso implementar a sincronização do certificado ebury-tls do projeto ebb-platform-prod para outro domínio via External Secrets Operator + Workload Identity.
+Estou com o card EPT-2392. Preciso implementar a sincronização do certificado ebury-tls do projeto ebb-platform-prod para outro domínio via External Secrets Operator + Workload Identity.
 
 Documentação de referência: https://bexs.atlassian.net/wiki/spaces/EP/pages/3280994306/005+-+Atualiza+o+em+massa+do+Certificado+Ebury+Tls
 
@@ -93,17 +93,27 @@ d) Atualizar o `kustomization.yaml` para referenciar todos os novos arquivos.
 ### 3. Namespaces a criar os ExternalSecrets:
 
 - core
-- nginx-external
-- nginx-internal
-- rails
+- hedge
+- istio-gateway-external
+- istio-gateway-internal
+- kong
+- kong
+- merchants
+- mocks
+- monitoring
+- portal
+- quotes
 
 ### 4. PRs
 
 - 1 PR para o ebb-iac-resource (IAM bindings dos 3 ambientes)
-- 1 PR por ambiente no ebb-platform-argocd (dev, stg, prd)
+- 1 Pr com um namespace para validação do funcionamento em dev
+- 1 PR por ambiente no ebb-platform-argocd (dev(restante dos namespaces), stg, prd)
 
-Formato do título: `feat(external-secrets): add ebury-tls sync for all <dominio> <env> namespaces [EPT-2395]`
+Formato do título: `feat(external-secrets): add ebury-tls sync for all <dominio> <env> namespaces [EPT-2392]`
 
 ### 5. Após finalizar
 
-Comentar no card EPT-2395 no Jira com o resumo das alterações e links dos PRs.
+Comentar no card EPT-2392 no Jira com o resumo das alterações e links dos PRs.
+
+OBS: o Addon kong, possui um external-secrets que usa o mesmo valor, mas cria um secrets com nome diferente chamado ebb-kong-ebury-tls, mantenha o nome, faça o pegar o valor do novo ClusterSecrets Store.
